@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Bootstrap Nexus | Smart Text Editor</title>
+    <!-- Bootstrap 5 CSS + Icons + Google Fonts for clean typography -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons library (rich icon set) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Google Font: Inter for modern readability -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+        }
+        body {
+            background: #f4f7fc;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        /* custom subtle card shadow & transitions for better UX */
+        .editor-card {
+            border: none;
+            border-radius: 24px;
+            transition: all 0.2s ease;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.02);
+        }
+        textarea {
+            resize: vertical;
+            font-size: 1rem;
+            line-height: 1.5;
+            border-radius: 20px;
+            transition: 0.2s;
+            background-color: #ffffff;
+        }
+        textarea:focus {
+            box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.2);
+            border-color: #0d6efd;
+        }
+        .stats-badge {
+            background: #e9ecef;
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-icon-action {
+            border-radius: 40px;
+            padding: 6px 18px;
+            font-weight: 500;
+            transition: 0.2s;
+        }
+        .navbar-brand-custom {
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+        footer {
+            margin-top: auto;
+            background: white;
+            border-top: 1px solid rgba(0,0,0,0.05);
+        }
+        .toolbar-btn {
+            border-radius: 40px;
+            padding: 5px 14px;
+        }
+        /* responsive adjustments */
+        @media (max-width: 576px) {
+            .btn-icon-action {
+                padding: 5px 12px;
+                font-size: 0.85rem;
+            }
+            .stats-badge {
+                font-size: 0.75rem;
+                padding: 4px 10px;
+            }
+        }
+        .preview-area {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 1.25rem;
+            min-height: 200px;
+            max-height: 320px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .card-header-clean {
+            background-color: transparent;
+            border-bottom: 1px solid #eef2f6;
+            padding: 1rem 1.25rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ================= NAVIGATION BAR (Bootstrap component) ================= -->
+    <nav class="navbar navbar-expand-lg bg-white shadow-sm sticky-top py-2">
+        <div class="container">
+            <!-- brand with icon -->
+            <a class="navbar-brand navbar-brand-custom d-flex align-items-center gap-2" href="#">
+                <i class="bi bi-pencil-square fs-3 text-primary"></i>
+                <span class="fw-bold fs-4" style="color: #1f2b3d;">Text<span class="text-primary">Forge</span></span>
+            </a>
+            <!-- toggler for mobile -->
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#editorNavbar" aria-controls="editorNavbar" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="editorNavbar">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0 gap-1">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="#"><i class="bi bi-house-door me-1"></i> Editor</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="aboutLink"><i class="bi bi-info-circle me-1"></i> About</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-gear"></i> Tools
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                            <li><a class="dropdown-item" href="#" id="clearDocBtn"><i class="bi bi-eraser"></i> Clear document</a></li>
+                            <li><a class="dropdown-item" href="#" id="copyTextBtn"><i class="bi bi-clipboard"></i> Copy to clipboard</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" id="sampleTextBtn"><i class="bi bi-file-text"></i> Insert sample</a></li>
+                        </ul>
+                    </li>
+                </ul>
+                <div class="ms-lg-3 d-flex">
+                    <span class="stats-badge" id="wordCountBadge">
+                        <i class="bi bi-chat-text"></i> <span id="wordCount">0</span> words
+                    </span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN CONTAINER with proper container + grid system -->
+    <main class="container my-4 my-md-5">
+        <!-- consistent row/column structure using Bootstrap grid -->
+        <div class="row g-4">
+            <!-- LEFT COLUMN: Text editor card + form controls (mobile first -> stacked, md+ 2/3 width) -->
+            <div class="col-12 col-lg-7 col-xl-8">
+                <!-- CARD component: main editor card -->
+                <div class="card editor-card h-100">
+                    <div class="card-header-clean d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <i class="bi bi-pen fs-5 text-primary me-1"></i>
+                            <span class="fw-semibold">Rich Text Composer</span>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-secondary toolbar-btn" id="uppercaseBtn" title="Uppercase"><i class="bi bi-type-uppercase"></i> Uppercase</button>
+                            <button class="btn btn-sm btn-outline-secondary toolbar-btn" id="lowercaseBtn" title="Lowercase"><i class="bi bi-type-lowercase"></i> Lowercase</button>
+                        </div>
+                    </div>
+                    <div class="card-body pt-0">
+                        <!-- Form group: textarea input component -->
+                        <div class="mb-3">
+                            <label for="editorTextarea" class="form-label fw-medium text-secondary">✍️ Write or paste your content</label>
+                            <textarea class="form-control p-3" id="editorTextarea" rows="12" placeholder="Start typing your thoughts, articles, notes, or code snippets...&#10;&#10;✔ Real-time word & character stats&#10;✔ Responsive design with Bootstrap 5&#10;✔ Formatting tools & live preview" style="font-family: inherit;"></textarea>
+                        </div>
+                        <!-- action buttons group (bootstrap buttons) -->
+                        <div class="d-flex flex-wrap gap-2 mt-2 justify-content-between align-items-center">
+                            <div class="d-flex flex-wrap gap-2">
+                                <button class="btn btn-primary btn-icon-action" id="clearTextBtn"><i class="bi bi-trash3"></i> Clear</button>
+                                <button class="btn btn-success btn-icon-action" id="copyMainBtn"><i class="bi bi-files"></i> Copy</button>
+                                <button class="btn btn-outline-info btn-icon-action" id="previewToggleBtn"><i class="bi bi-eye"></i> Live Preview</button>
+                            </div>
+                            <div class="text-muted small">
+                                <i class="bi bi-arrow-repeat"></i> Auto-save in browser
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Stats card + live preview (responsive stack) -->
+            <div class="col-12 col-lg-5 col-xl-4">
+                <div class="row g-4">
+                    <!-- statistics card with realtime metrics -->
+                    <div class="col-12">
+                        <div class="card editor-card">
+                            <div class="card-header-clean">
+                                <i class="bi bi-bar-chart-steps me-1 text-info"></i> Document Insights
+                            </div>
+                            <div class="card-body">
+                                <div class="row text-center g-2">
+                                    <div class="col-6">
+                                        <div class="p-2 rounded-3 bg-light">
+                                            <i class="bi bi-fonts fs-4 text-primary"></i>
+                                            <h5 class="mt-2 mb-0" id="charCountDisplay">0</h5>
+                                            <small class="text-secondary">Characters</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-2 rounded-3 bg-light">
+                                            <i class="bi bi-wordpress fs-4 text-success"></i>
+                                            <h5 class="mt-2 mb-0" id="wordCountDisplay">0</h5>
+                                            <small class="text-secondary">Words</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 mt-2">
+                                        <div class="p-2 rounded-3 bg-light">
+                                            <i class="bi bi-text-paragraph"></i>
+                                            <span class="fw-semibold ms-1">Lines: </span>
+                                            <span id="lineCountDisplay">0</span>
+                                            <span class="mx-2">|</span>
+                                            <i class="bi bi-spellcheck"></i>
+                                            <span class="fw-semibold ms-1">Spaces: </span>
+                                            <span id="spaceCountDisplay">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <hr class="my-3">
+                                <div class="d-flex justify-content-between">
+                                    <div><i class="bi bi-save2"></i> <span id="lastUpdateMsg">Ready</span></div>
+                                    <div><i class="bi bi-display"></i> Responsive</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Live preview card + extra form to demonstrate bootstrap form integration -->
+                    <div class="col-12">
+                        <div class="card editor-card" id="previewCard">
+                            <div class="card-header-clean d-flex justify-content-between">
+                                <span><i class="bi bi-layout-text-window"></i> Live Preview</span>
+                                <small class="text-muted fw-normal">styled rendering</small>
+                            </div>
+                            <div class="card-body">
+                                <div class="preview-area" id="livePreviewDiv">
+                                    <em class="text-secondary">Your formatted content will appear here...</em>
+                                </div>
+                                <!-- additional form range for font size simulation (Bootstrap form component) -->
+                                <label class="form-label mt-3 mb-1 small fw-semibold"><i class="bi bi-textarea-resize"></i> Preview font size (demo)</label>
+                                <input type="range" class="form-range" min="12" max="24" step="1" value="16" id="previewFontRange">
+                                <div class="form-text">Adjust preview readability</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- additional quick actions card demonstrating toolkit with icons and spacing utilities -->
+        <div class="row mt-4 g-3">
+            <div class="col-12">
+                <div class="card editor-card">
+                    <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3 py-3">
+                        <div class="d-flex gap-3">
+                            <span class="badge bg-primary bg-opacity-10 text-dark p-2"><i class="bi bi-symmetry-vertical"></i> Format Utilities</span>
+                            <button class="btn btn-sm btn-outline-secondary" id="trimSpacesBtn"><i class="bi bi-text-indent-left"></i> Trim spaces</button>
+                            <button class="btn btn-sm btn-outline-secondary" id="removeExtraLinesBtn"><i class="bi bi-arrows-expand"></i> Condense lines</button>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-link text-decoration-none" id="showAlertDemo"><i class="bi bi-chat-dots"></i> Tip: text persists</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- FOOTER component with bootstrap spacing & grid utilities -->
+    <footer class="py-4 mt-3">
+        <div class="container">
+            <div class="row align-items-center gy-2">
+                <div class="col-md-6 text-center text-md-start">
+                    <i class="bi bi-bootstrap-fill text-primary me-1"></i>
+                    <span class="small text-secondary">Bootstrap 5 Editor • Fully responsive grid system • fluid containers </span>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <i class="bi bi-device-desktop"></i> <span class="mx-1">|</span> <i class="bi bi-tablet"></i> <span class="mx-1">|</span> <i class="bi bi-phone"></i>
+                    <span class="ms-2 small text-muted">cross-device ready</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS bundle for navbar toggler, dropdown, etc. -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        (function() {
+            // DOM elements
+            const editor = document.getElementById('editorTextarea');
+            const wordCountSpan = document.getElementById('wordCount');
+            const wordCountDisplay = document.getElementById('wordCountDisplay');
+            const charCountDisplay = document.getElementById('charCountDisplay');
+            const lineCountDisplay = document.getElementById('lineCountDisplay');
+            const spaceCountDisplay = document.getElementById('spaceCountDisplay');
+            const lastUpdateMsg = document.getElementById('lastUpdateMsg');
+            const livePreviewDiv = document.getElementById('livePreviewDiv');
+            const previewFontRange = document.getElementById('previewFontRange');
+
+            // Helper: update all statistics & preview + localStorage auto-save
+            function updateAllStatsAndPreview() {
+                let text = editor.value;
+                // calculate stats
+                const charCount = text.length;
+                const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).filter(word => word.length > 0).length;
+                const lines = text === '' ? 0 : text.split(/\r?\n/).length;
+                const spaces = (text.match(/ /g) || []).length;
+                
+                // update DOM elements
+                wordCountSpan.innerText = words;
+                wordCountDisplay.innerText = words;
+                charCountDisplay.innerText = charCount;
+                lineCountDisplay.innerText = lines;
+                spaceCountDisplay.innerText = spaces;
+                
+                // update preview (basic plain text -> preserve line breaks, escape html for safety)
+                let previewHtml = text.replace(/[&<>]/g, function(m) {
+                    if (m === '&') return '&amp;';
+                    if (m === '<') return '&lt;';
+                    if (m === '>') return '&gt;';
+                    return m;
+                }).replace(/\n/g, '<br>');
+                if (text.trim() === '') {
+                    livePreviewDiv.innerHTML = '<span class="text-muted fst-italic">✨ Your content preview will show here. Start writing...</span>';
+                } else {
+                    livePreviewDiv.innerHTML = previewHtml;
+                }
+                
+                // auto-save to localStorage with timestamp
+                localStorage.setItem('bootstrapEditorContent', text);
+                const now = new Date();
+                lastUpdateMsg.innerText = `Saved ${now.toLocaleTimeString()}`;
+            }
+            
+            // debouncing for performance
+            let debounceTimer;
+            function debouncedUpdate() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    updateAllStatsAndPreview();
+                }, 50);
+            }
+            
+            // load saved content from localStorage
+            function loadSavedContent() {
+                const saved = localStorage.getItem('bootstrapEditorContent');
+                if (saved !== null) {
+                    editor.value = saved;
+                    updateAllStatsAndPreview();
+                } else {
+                    // default initial friendly text (bootstrap themed)
+                    editor.value = `Welcome to TextForge Editor 🚀\n\nUse Bootstrap grid system & components:\n• Responsive navbar + dropdown\n• Cards, buttons, forms, icons\n• Real-time word/char stats\n• Live preview panel\n\nWrite something amazing! ✨`;
+                    updateAllStatsAndPreview();
+                }
+            }
+            
+            // event listeners
+            editor.addEventListener('input', debouncedUpdate);
+            editor.addEventListener('keyup', debouncedUpdate);
+            
+            // clear text action
+            const clearBtn = document.getElementById('clearTextBtn');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', () => {
+                    if (confirm('Clear entire document? This action cannot be undone.')) {
+                        editor.value = '';
+                        updateAllStatsAndPreview();
+                    }
+                });
+            }
+            
+            // copy button (main + dropdown)
+            const copyMain = document.getElementById('copyMainBtn');
+            const copyDropdown = document.getElementById('copyTextBtn');
+            function copyToClipboard() {
+                const textToCopy = editor.value;
+                if (!textToCopy.trim()) {
+                    // optional bootstrap toast simulation? use alert
+                    alert('Nothing to copy — editor is empty.');
+                    return;
+                }
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    // show temp feedback (style tweak)
+                    const originalText = copyMain.innerHTML;
+                    copyMain.innerHTML = '<i class="bi bi-check-lg"></i> Copied!';
+                    setTimeout(() => { copyMain.innerHTML = originalText; }, 1500);
+                    alert('✓ Text copied to clipboard!');
+                }).catch(() => alert('Unable to copy'));
+            }
+            copyMain.addEventListener('click', copyToClipboard);
+            if (copyDropdown) copyDropdown.addEventListener('click', (e) => { e.preventDefault(); copyToClipboard(); });
+            
+            // clear document via dropdown
+            const clearDoc = document.getElementById('clearDocBtn');
+            if (clearDoc) {
+                clearDoc.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (confirm('Clear all text?')) {
+                        editor.value = '';
+                        updateAllStatsAndPreview();
+                    }
+                });
+            }
+            
+            // sample text insertion
+            const sampleBtn = document.getElementById('sampleTextBtn');
+            if (sampleBtn) {
+                sampleBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const sample = `🌟 Bootstrap Nexus Sample Text 🌟\n\nThis demonstrates responsive typography and grid alignment.\n\n👉 Features:\n- Navigation bar with dropdowns\n- Cards with icons\n- Real-time character/word tracking\n- LocalStorage autosave\n- Live preview & font sizing\n\nCross-device: Mobile, Tablet, Desktop — all consistent grid layout.\n\nEnjoy crafting with Bootstrap 5! 🎨`;
+                    editor.value = sample;
+                    updateAllStatsAndPreview();
+                });
+            }
+            
+            // uppercase / lowercase transformation
+            const upperBtn = document.getElementById('uppercaseBtn');
+            const lowerBtn = document.getElementById('lowercaseBtn');
+            if (upperBtn) {
+                upperBtn.addEventListener('click', () => {
+                    editor.value = editor.value.toUpperCase();
+                    updateAllStatsAndPreview();
+                });
+            }
+            if (lowerBtn) {
+                lowerBtn.addEventListener('click', () => {
+                    editor.value = editor.value.toLowerCase();
+                    updateAllStatsAndPreview();
+                });
+            }
+            
+            // trim spaces (extra whitespace removal)
+            const trimSpacesBtn = document.getElementById('trimSpacesBtn');
+            if (trimSpacesBtn) {
+                trimSpacesBtn.addEventListener('click', () => {
+                    let val = editor.value;
+                    let trimmed = val.replace(/[ \t]+/g, ' ').replace(/^\s+|\s+$/g, '');
+                    editor.value = trimmed;
+                    updateAllStatsAndPreview();
+                });
+            }
+            
+            // remove extra empty lines (condense)
+            const removeLinesBtn = document.getElementById('removeExtraLinesBtn');
+            if (removeLinesBtn) {
+                removeLinesBtn.addEventListener('click', () => {
+                    let val = editor.value;
+                    let condensed = val.replace(/[\r\n]{3,}/g, '\n\n');
+                    editor.value = condensed;
+                    updateAllStatsAndPreview();
+                });
+            }
+            
+            // preview toggle between show/hide? not necessary but we implement a temporary scroll or demo:
+            const previewToggle = document.getElementById('previewToggleBtn');
+            if (previewToggle) {
+                previewToggle.addEventListener('click', () => {
+                    const previewCardElem = document.getElementById('previewCard');
+                    if (previewCardElem) {
+                        const isHidden = previewCardElem.style.display === 'none';
+                        if (isHidden) {
+                            previewCardElem.style.display = '';
+                            previewToggle.innerHTML = '<i class="bi bi-eye"></i> Live Preview';
+                        } else {
+                            previewCardElem.style.display = 'none';
+                            previewToggle.innerHTML = '<i class="bi bi-eye-slash"></i> Show Preview';
+                        }
+                    }
+                });
+            }
+            
+            // Adjust preview font size dynamically using range slider (form component demo)
+            if (previewFontRange) {
+                const previewDiv = document.getElementById('livePreviewDiv');
+                previewFontRange.addEventListener('input', (e) => {
+                    const fontSize = e.target.value + 'px';
+                    previewDiv.style.fontSize = fontSize;
+                });
+                // set initial style consistent
+                previewDiv.style.transition = 'font-size 0.1s';
+            }
+            
+            // About link alert but keeps bootstrap nice
+            const aboutLink = document.getElementById('aboutLink');
+            if (aboutLink) {
+                aboutLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    alert('📘 TextForge Editor\nBuilt with Bootstrap 5 Grid System → container, rows, columns.\nComponents: Navbar, Cards, Buttons, Forms, Icons.\nResponsive design: mobile (stacked) → tablet → desktop multi-column.\n🔁 localStorage persists text. Cross-device compatible.');
+                });
+            }
+            
+            // additional demo alert for 'showAlertDemo'
+            const alertDemo = document.getElementById('showAlertDemo');
+            if (alertDemo) {
+                alertDemo.addEventListener('click', () => {
+                    alert('💡 Tip: Your text is automatically saved in your browser\'s local storage. Refresh page to recover content! The interface uses Bootstrap spacing utilities (gap, mt, mb, p-3) and fully responsive layout.');
+                });
+            }
+            
+            // Character limit subtle (just to demonstrate extra form concept, but not limiting)
+            // also ensure cross-device compatibility: all good, done.
+            
+            // initial load
+            loadSavedContent();
+            
+            // optional: listen window beforeunload backup but already saving each update.
+        })();
+    </script>
+</body>
+</html>
